@@ -51,6 +51,14 @@
     [self.reachabilityManager startMonitoring];
 }
 
+- (void) checkAndCancelAllOperations
+{
+    if ( self.operationQueue.operationCount > 0 ) {
+        [self.operationQueue cancelAllOperations];
+        self.cancelAllOperations = YES;
+    }
+}
+
 - (NSMutableURLRequest *) addDefaultHeaderFieldsForRequest:(NSMutableURLRequest *)request
 {
 //////////////////////////////////////////////////////////////////////
@@ -76,16 +84,6 @@
     return [defaultDictionary copy];
 }
 
-- (NSSet *) contentTypes
-{
-    return [NSSet setWithObjects:@"application/json", @"text/plain", @"text/html", nil];
-}
-
-- (NSString *) absoluteURLStringFrom:(NSString *)URLString
-{
-    return [[NSURL URLWithString:URLString relativeToURL:self.baseURL] absoluteString];
-}
-
 - (NSMutableURLRequest *) requestWithMethod:(NSString *)method URLString:(NSString *)URLString parameters:(NSDictionary *)parameters
 {
     NSMutableURLRequest *request = [self.requestSerializer requestWithMethod:method URLString:URLString parameters:parameters error:nil];
@@ -100,41 +98,14 @@
     return [self addDefaultHeaderFieldsForRequest:request];
 }
 
-- (void) actionForStatusCode:(NSInteger)statusCode
+- (NSSet *) contentTypes
 {
-    switch (statusCode) {
-        case 401:
-            break;
-            
-        default:
-            break;
-    }
+    return [NSSet setWithObjects:@"application/json", @"text/plain", @"text/html", nil];
 }
 
-#pragma mark - New Operation methods
-
-- (AFHTTPRequestOperation *) GET:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
+- (NSString *) absoluteURLStringFrom:(NSString *)URLString
 {
-    [self setSuccessBlock:success];
-    return [self GET:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
-}
-
-- (AFHTTPRequestOperation *) POST:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
-{
-    [self setSuccessBlock:success];
-    return [self POST:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
-}
-
-- (AFHTTPRequestOperation *) PUT:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
-{
-    [self setSuccessBlock:success];
-    return [self PUT:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
-}
-
-- (AFHTTPRequestOperation *) DELETE:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
-{
-    [self setSuccessBlock:success];
-    return [self DELETE:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
+    return [[NSURL URLWithString:URLString relativeToURL:self.baseURL] absoluteString];
 }
 
 #pragma mark - Override Methods
@@ -191,6 +162,53 @@
     return operation;
 }
 
+@end
+
+@implementation ApiHTTPClient (NewOperationMethods)
+
+- (void) actionForStatusCode:(NSInteger)statusCode
+{
+    switch (statusCode) {
+        case 401:
+            break;
+            
+        case 404:
+            break;
+            
+        case 500:
+            break;
+            
+        default:
+            break;
+    }
+}
+
+#pragma mark - New Operation methods
+
+- (AFHTTPRequestOperation *) GET:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
+{
+    [self setSuccessBlock:success];
+    return [self GET:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
+}
+
+- (AFHTTPRequestOperation *) POST:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
+{
+    [self setSuccessBlock:success];
+    return [self POST:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
+}
+
+- (AFHTTPRequestOperation *) PUT:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
+{
+    [self setSuccessBlock:success];
+    return [self PUT:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
+}
+
+- (AFHTTPRequestOperation *) DELETE:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
+{
+    [self setSuccessBlock:success];
+    return [self DELETE:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
+}
+
 #pragma mark - Override Blocks
 
 - (AFHTTPRequestOperationBlockError) errorBlock
@@ -217,6 +235,20 @@
 
 @end
 
+@implementation AFHTTPRequestOperation (SuccessLog)
+
+- (void) successLog
+{
+    NSLog(@"------ REQUEST SUCCESS LOG ------");
+    NSLog(@"Request %@", [self.request.URL absoluteString]);
+    NSLog(@"Status Code %ld", (long)self.response.statusCode);
+    NSLog(@"Headers %@", self.response.allHeaderFields);
+    NSLog(@"Cookie %@", self.response.allHeaderFields[@"Set-Cookie"]);
+    NSLog(@"-------------------------------");
+}
+
+@end
+
 @implementation NSDictionary (Succeeded)
 
 - (BOOL) succeeded
@@ -239,20 +271,6 @@
     dispatch_async(dispatch_get_main_queue(), ^{
         [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Attention", @"Attention") message:[self errorMessage] delegate:nil cancelButtonTitle:nil otherButtonTitles:NSLocalizedString(@"Ok", @"Ok"), nil] show];
     });
-}
-
-@end
-
-@implementation AFHTTPRequestOperation (SuccessLog)
-
-- (void) successLog
-{
-    NSLog(@"------ REQUEST SUCCESS LOG ------");
-    NSLog(@"Request %@", [self.request.URL absoluteString]);
-    NSLog(@"Status Code %ld", (long)self.response.statusCode);
-    NSLog(@"Headers %@", self.response.allHeaderFields);
-    NSLog(@"Cookie %@", self.response.allHeaderFields[@"Set-Cookie"]);
-    NSLog(@"-------------------------------");
 }
 
 @end
