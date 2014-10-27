@@ -9,6 +9,10 @@
 #import "ApiHTTPClient.h"
 
 @interface ApiHTTPClient ()
+- (NSMutableURLRequest *) addDefaultHeaderFieldsForRequest:(NSMutableURLRequest *)request;
+- (NSSet *) contentTypes;
+- (NSString *) absoluteURLStringFrom:(NSString *)URLString;
+- (void) actionForStatusCode:(NSInteger)statusCode;
 @end
 
 @implementation ApiHTTPClient
@@ -108,6 +112,47 @@
     return [[NSURL URLWithString:URLString relativeToURL:self.baseURL] absoluteString];
 }
 
+- (void) actionForStatusCode:(NSInteger)statusCode
+{
+    switch (statusCode) {
+        case 401:
+            break;
+            
+        case 404:
+            break;
+            
+        case 500:
+            break;
+            
+        default:
+            break;
+    }
+}
+
+#pragma mark - Override Blocks
+
+- (AFHTTPRequestOperationBlockError) errorBlock
+{
+    __weak AFHTTPRequestOperationBlockSuccess blockSuccess = self.successBlock;
+    __weak typeof(self) weakSelf = self;
+    AFHTTPRequestOperationBlockError errorBlock = ^( AFHTTPRequestOperation *operation, NSError *error ) {
+        blockSuccess(operation, operation.responseObject);
+        
+        [weakSelf actionForStatusCode:operation.response.statusCode];
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"com.bg.error.notification" object:nil
+                                                          userInfo:@{ @"operation":operation }];
+        NSLog(@"------ REQUEST ERROR LOG START ------");
+        NSLog(@"Request %@", [operation.request.URL absoluteString]);
+        NSLog(@"Status Code %ld", (long)operation.response.statusCode);
+        NSLog(@"Headers %@", operation.response.allHeaderFields);
+        NSLog(@"Error %@", error.localizedDescription);
+        NSLog(@"------ REQUEST ERROR LOG END ------");
+    };
+    
+    return errorBlock;
+}
+
 #pragma mark - Override Methods
 
 - (AFHTTPRequestOperation *)GET:(NSString *)URLString
@@ -166,23 +211,6 @@
 
 @implementation ApiHTTPClient (NewOperationMethods)
 
-- (void) actionForStatusCode:(NSInteger)statusCode
-{
-    switch (statusCode) {
-        case 401:
-            break;
-            
-        case 404:
-            break;
-            
-        case 500:
-            break;
-            
-        default:
-            break;
-    }
-}
-
 #pragma mark - New Operation methods
 
 - (AFHTTPRequestOperation *) GET:(NSString *)URLString parameters:(NSDictionary *)parameters success:(AFHTTPRequestOperationBlockSuccess)success
@@ -207,30 +235,6 @@
 {
     [self setSuccessBlock:success];
     return [self DELETE:URLString parameters:parameters success:self.successBlock failure:self.errorBlock];
-}
-
-#pragma mark - Override Blocks
-
-- (AFHTTPRequestOperationBlockError) errorBlock
-{
-    __weak AFHTTPRequestOperationBlockSuccess blockSuccess = self.successBlock;
-    __weak typeof(self) weakSelf = self;
-    AFHTTPRequestOperationBlockError errorBlock = ^( AFHTTPRequestOperation *operation, NSError *error ) {
-        blockSuccess(operation, operation.responseObject);
-        
-        [weakSelf actionForStatusCode:operation.response.statusCode];
-        
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"com.bg.error.notification" object:nil
-                                                          userInfo:@{ @"operation":operation }];
-        NSLog(@"------ REQUEST ERROR LOG ------");
-        NSLog(@"Request %@", [operation.request.URL absoluteString]);
-        NSLog(@"Status Code %ld", (long)operation.response.statusCode);
-        NSLog(@"Headers %@", operation.response.allHeaderFields);
-        NSLog(@"Error %@", error.localizedDescription);
-        NSLog(@"-------------------------------");
-    };
-    
-    return errorBlock;
 }
 
 @end
