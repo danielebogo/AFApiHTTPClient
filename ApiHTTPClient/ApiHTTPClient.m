@@ -133,10 +133,9 @@
 
 - (AFHTTPRequestOperationBlockError) errorBlock
 {
-    __weak AFHTTPRequestOperationBlockSuccess blockSuccess = self.successBlock;
     __weak typeof(self) weakSelf = self;
     AFHTTPRequestOperationBlockError errorBlock = ^( AFHTTPRequestOperation *operation, NSError *error ) {
-        blockSuccess(operation, operation.responseObject);
+        weakSelf.successBlock(operation, nil);
         
         [weakSelf actionForStatusCode:operation.response.statusCode];
         
